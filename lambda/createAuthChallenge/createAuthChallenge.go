@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
+
+	"crypto/rand"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -11,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
-	"github.com/google/uuid"
 )
 
 // Email -
@@ -46,28 +49,33 @@ const (
 )
 
 // HandleLambdaEvent -
-func HandleLambdaEvent(ctx context.Context, e events.CognitoEventUserPoolsCreateAuthChallenge) {
-	var secretLoginCode string
-	var previousChallenge string
-
-	log.Println("secretLoginCode:", secretLoginCode)
-
-	if len(e.Request.Session) > 0 {
-		secretLoginCode = SecretGen()
-		// sendEmail(e.Request.UserAttributes["email"])
-	} else {
-		e.Request.Session
+func HandleLambdaEvent(ctx context.Context, event *events.CognitoEventUserPoolsCreateAuthChallenge) (*events.CognitoEventUserPoolsCreateAuthChallenge, error) {
+	code := calculateChallengeCode(event.Request.Session)
+	
+	event.Response = events.CognitoEventUserPoolsCreateAuthChallengeResponse{
+		PrivateChallengeParameters: map[string]string{
+			"code": code,
+		},
+		PublicChallengeParameters: map[string]string{
+			"phone": event.Request.UserAttributes["phone_number"],
+		},
+		ChallengeMetadata: code,
 	}
 
-	e.Response.PublicChallengeParameters = map[string]string{
-		"email": e.Request.UserAttributes["email"],
-	}
+	// e.Response.PublicChallengeParameters = map[string]string{
+	// 	"email": e.Request.UserAttributes["email"],
+	// }
 
-	e.Response.PrivateChallengeParameters = map[string]string{
-		"secret": secretLoginCode,
-	}
+	// e.Response.PrivateChallengeParameters = map[string]string{
+	// 	"secret": secretLoginCode,
+	// }
 
-	e.Response.ChallengeMetadata = fmt.Sprintf("CODE-%s", secretLoginCode)
+	// e.Response.ChallengeMetadata = fmt.Sprintf("CODE-%s", secretLoginCode)
+
+	b, _ := json.Marshal(event)
+	log.Println(string(b))
+
+	return event, nil
 
 }
 
@@ -75,11 +83,30 @@ func main() {
 	lambda.Start(HandleLambdaEvent)
 }
 
-// SecretGen - secret generator
-func SecretGen() string {
-	u, _ := uuid.NewRandom()
-	uuidIndex := len(u.String()) - SecretLen
-	return u.String()[uuidIndex:]
+func genSecret() string {
+	b := make([]byte, SecretLen)
+	_, err := rand.Read(b)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	return base64.URLEncoding.EncodeToString(b)[:SecretLen]
+}
+
+func calculateChallengeCode(session []*events.CognitoEventUserPoolsChallengeResult) string {
+	var sessionLen = len(session)
+	var secretLoginCode string
+
+	if sessionLen == 0 {
+		log.Println("this is a new auth session, generate a new secret login code")
+		secretLoginCode = genSecret()
+		log.Println("secretLoginCode:", secretLoginCode)
+	} else {
+		log.Println("there is existing session. Dont generate new secret, re-use code from current session")
+		secretLoginCode = session[sessionLen-1].ChallengeMetadata
+	}
+
+	return secretLoginCode
 }
 
 // Send -

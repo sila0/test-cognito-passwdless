@@ -15,3 +15,9 @@ onec you got both session and secret codes, input them into command below
   --challenge-name CUSTOM_CHALLENGE \
   --challenge-responses USERNAME=sila,ANSWER=<SECRET_CODE> \
   --session "SESSION"
+  
+  # Reference
+  - https://dev.to/duarten/passwordless-authentication-with-cognito-13c
+  - https://aws.amazon.com/blogs/mobile/implementing-passwordless-email-authentication-with-amazon-cognito
+  - https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/index.html#cli-aws-cognito-idp
+  

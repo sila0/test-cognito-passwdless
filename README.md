@@ -1,4 +1,4 @@
-## Passwordless Auth with Amazon Cognito
+# Passwordless Auth with Amazon Cognito
 for POC purpose
 
 ## Testing

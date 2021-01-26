@@ -12,7 +12,7 @@ for POC purpose
   
 2. Onec you got both session and secret codes, input them into command below.
 > aws --profile <AWS_PROFILE> cognito-idp respond-to-auth-challenge 
-      --client-id 2pgajrug6lsuv8mvgauf2e7cg5 \
+      --client-id <CLIENT_ID> \
       --challenge-name CUSTOM_CHALLENGE \
       --challenge-responses USERNAME=sila,ANSWER=<SECRET_CODE> \
       --session <SESSION>
